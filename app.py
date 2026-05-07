@@ -24,8 +24,12 @@ def _hash(pwd: str) -> str:
     return hashlib.sha256(pwd.encode()).hexdigest()
 
 USUARIOS = {
-    "wagner":   {"hash": _hash("Ind!o@W2026"), "nome": "Wagner Antonelli"},
-    "carolina": {"hash": _hash("Ind!o@C2026"), "nome": "Carolina"},
+    "wagner":          {"hash": _hash("Ind!o@W2026"),  "nome": "Wagner Antonelli"},
+    "carolina":        {"hash": _hash("Ind!o@C2026"),  "nome": "Carolina"},
+    "david":           {"hash": _hash("Ind!o@D2026"),  "nome": "David"},
+    "nicolas":         {"hash": _hash("Ind!o@N2026"),  "nome": "Nicolas"},
+    "financeiro":      {"hash": _hash("Ind!o@Fin26"),  "nome": "Financeiro"},
+    "fiscaltributario":{"hash": _hash("Ind!o@FT2026"), "nome": "Fiscal Tributário"},
 }
 
 def login_screen():
