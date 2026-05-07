@@ -27,9 +27,9 @@ def _secret(key, default=""):
 
 CLIENT_ID         = _secret("POWERBI_CLIENT_ID",     "63cdc2e6-d4de-4c1b-acb6-5dd8db8c603e")
 TENANT_ID         = _secret("POWERBI_TENANT_ID",     "45d3d314-8ae9-4a13-92d6-ade3ede81811")
-CLIENT_SECRET     = _secret("POWERBI_CLIENT_SECRET", "")
-PBI_USERNAME      = _secret("POWERBI_USERNAME",      "")
-PBI_PASSWORD      = _secret("POWERBI_PASSWORD",      "")
+CLIENT_SECRET     = _secret("POWERBI_CLIENT_SECRET", "")   # configurar no Streamlit Cloud Secrets
+PBI_USERNAME      = _secret("POWERBI_USERNAME",      "bi.indio@teleconsistemas.com.br")
+PBI_PASSWORD      = _secret("POWERBI_PASSWORD",      "")   # configurar no Streamlit Cloud Secrets
 WORKSPACE_ID      = "5bebea90-6285-45cd-8107-95afdd267f6b"
 DATASET_GERENCIAL = "586615c6-7d19-44ce-af2d-359b40d9f4bf"
 DATASET_PDV       = "29e69b70-8009-4b52-aca3-9db1dbdb66ab"
@@ -110,7 +110,11 @@ def get_token():
         if result and "access_token" in result:
             return result["access_token"]
 
-    raise Exception("Autenticação falhou. Configure POWERBI_USERNAME e POWERBI_PASSWORD nos Streamlit Secrets.")
+    raise Exception(
+        "Autenticação Power BI falhou. Verifique:\n"
+        "1. No Streamlit Cloud → Settings → Secrets: configure POWERBI_PASSWORD\n"
+        "2. Ou adicione o Service Principal ao workspace no app.powerbi.com"
+    )
 
 
 def dax_query(dataset_id: str, query: str) -> list[dict]:
@@ -215,7 +219,7 @@ def fmt_pct(v): return f"{v:.1%}"
 
 # ─── SIDEBAR ───────────────────────────────────────────────────
 with st.sidebar:
-    st.image("https://via.placeholder.com/200x60/1B2A4A/FFFFFF?text=INDIO", use_column_width=True)
+    st.markdown("## 🛒 Índio")
     st.markdown("### 📅 Período")
     col_ini, col_fim = st.columns(2)
     with col_ini:
