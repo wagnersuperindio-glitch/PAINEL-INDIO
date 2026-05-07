@@ -6,6 +6,7 @@ from plotly.subplots import make_subplots
 import msal
 import requests
 import json
+import hashlib
 from pathlib import Path
 from datetime import date, datetime
 import os
@@ -17,6 +18,54 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# ─── AUTENTICAÇÃO ─────────────────────────────────────────────
+def _hash(pwd: str) -> str:
+    return hashlib.sha256(pwd.encode()).hexdigest()
+
+USUARIOS = {
+    "wagner":   {"hash": _hash("Ind!o@W2026"), "nome": "Wagner Antonelli"},
+    "carolina": {"hash": _hash("Ind!o@C2026"), "nome": "Carolina"},
+}
+
+def login_screen():
+    st.markdown("""
+    <style>
+    .login-box {
+        max-width: 380px; margin: 80px auto; background: white;
+        border-radius: 16px; padding: 40px; box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+        text-align: center;
+    }
+    .login-title { font-size: 26px; font-weight: 800; color: #1B2A4A; margin-bottom: 4px; }
+    .login-sub   { font-size: 13px; color: #888; margin-bottom: 28px; }
+    </style>
+    <div class="login-box">
+        <div class="login-title">🛒 Supermercados Índio</div>
+        <div class="login-sub">Painel de Lojas — Acesso Restrito</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        usuario = st.text_input("Usuário", placeholder="seu usuário").strip().lower()
+        senha   = st.text_input("Senha", type="password", placeholder="••••••••")
+        entrar  = st.button("Entrar", use_container_width=True, type="primary")
+
+        if entrar:
+            if usuario in USUARIOS and USUARIOS[usuario]["hash"] == _hash(senha):
+                st.session_state["autenticado"] = True
+                st.session_state["usuario"]     = usuario
+                st.session_state["nome"]        = USUARIOS[usuario]["nome"]
+                st.rerun()
+            else:
+                st.error("Usuário ou senha incorretos.")
+
+def check_auth():
+    if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
+        login_screen()
+        st.stop()
+
+check_auth()
 
 # Credenciais — lidas do Streamlit Secrets (cloud) ou variáveis de ambiente (local)
 def _secret(key, default=""):
@@ -220,6 +269,12 @@ def fmt_pct(v): return f"{v:.1%}"
 # ─── SIDEBAR ───────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## 🛒 Índio")
+    nome_usuario = st.session_state.get("nome", "")
+    st.markdown(f"<small style='color:#aaa'>👤 {nome_usuario}</small>", unsafe_allow_html=True)
+    if st.button("🚪 Sair", use_container_width=True):
+        st.session_state.clear()
+        st.rerun()
+    st.markdown("---")
     st.markdown("### 📅 Período")
     col_ini, col_fim = st.columns(2)
     with col_ini:
