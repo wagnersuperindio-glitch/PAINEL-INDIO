@@ -1,0 +1,25 @@
+name: Keep Painel Indio Alive
+
+on:
+  schedule:
+    # Pinga o painel a cada 5 minutos (horário comercial BR)
+    - cron: '*/5 10-23 * * 1-6'   # Seg-Sáb, 07h-20h BRT (UTC-3)
+    - cron: '*/5 0-1 * * 1-6'     # Seg-Sáb, 21h-22h BRT
+  workflow_dispatch:               # Permite rodar manualmente
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Painel Indio
+        run: |
+          echo "Pingando painel em $(date)"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 30 \
+            "https://painel-lojas-indio.streamlit.app")
+          echo "HTTP Status: $STATUS"
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ Painel online"
+          else
+            echo "⚠ Painel retornou $STATUS — pode estar acordando"
+          fi
