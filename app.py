@@ -185,18 +185,24 @@ def dax_query(dataset_id: str, query: str) -> list[dict]:
 # ─── DADOS ─────────────────────────────────────────────────────
 @st.cache_data(ttl=300, show_spinner="Carregando dados do Power BI...")
 def carregar_vendas(data_ini: str, data_fim: str) -> pd.DataFrame:
-    query = f"""
+    yi, mi, di = data_ini.split("-")
+    yf, mf, df_ = data_fim.split("-")
+
+    # Query 1: Vendas e CMV do dataset gerencial
+    query_ger = f"""
     EVALUATE
     SUMMARIZECOLUMNS(
         VendasDia[CodLoja],
         Lojas[Nome],
-        "Vendas",         SUM(VendasDia[ValorTotal]),
-        "CMV",            SUM(VendasDia[TotalCmvCustoGerencial]),
-        "Cupons",         COUNTROWS(SUMMARIZE(VendasDia, VendasDia[CodLoja], VendasDia[DataVenda])),
-        KEEPFILTERS(FILTER(ALL(VendasDia), VendasDia[DataVenda] >= DATE({data_ini.replace('-',',' )}) && VendasDia[DataVenda] <= DATE({data_fim.replace('-',',')})))
+        FILTER(ALL(VendasDia),
+            VendasDia[DataVenda] >= DATE({yi},{mi},{di}) &&
+            VendasDia[DataVenda] <= DATE({yf},{mf},{df_})
+        ),
+        "Vendas", SUM(VendasDia[ValorTotal]),
+        "CMV",    SUM(VendasDia[TotalCmvCustoGerencial])
     )
     """
-    rows = dax_query(DATASET_GERENCIAL, query)
+    rows = dax_query(DATASET_GERENCIAL, query_ger)
     if not rows:
         return pd.DataFrame()
     df = pd.DataFrame(rows)
@@ -204,45 +210,88 @@ def carregar_vendas(data_ini: str, data_fim: str) -> pd.DataFrame:
     df["CodLoja"] = df["CodLoja"].astype(int)
     df["Vendas"]  = df["Vendas"].astype(float)
     df["CMV"]     = df["CMV"].astype(float)
-    df["Cupons"]  = df["Cupons"].astype(int)
-    df["Meta"]    = df["CodLoja"].map(METAS_LOJAS).fillna(0)
-    df["Margem"]  = (df["Vendas"] - df["CMV"]) / df["Vendas"]
-    df["Ticket"]  = df["Vendas"] / df["Cupons"]
-    df["Ating"]   = df["Vendas"] / df["Meta"]
+
+    # Filtrar lojas inativas
+    df = df[~df["CodLoja"].isin([5, 8])].copy()
+
+    # Query 2: Contagem de transações (cupons) do dataset PDV
+    try:
+        query_pdv = f"""
+        EVALUATE
+        SUMMARIZECOLUMNS(
+            VendasPDV_Dia[CodLoja],
+            FILTER(ALL(VendasPDV_Dia),
+                VendasPDV_Dia[Data] >= DATE({yi},{mi},{di}) &&
+                VendasPDV_Dia[Data] <= DATE({yf},{mf},{df_})
+            ),
+            "Cupons", SUM(VendasPDV_Dia[QTD_Vendas])
+        )
+        """
+        rows_pdv = dax_query(DATASET_PDV, query_pdv)
+        if rows_pdv:
+            df_pdv = pd.DataFrame(rows_pdv)
+            df_pdv.columns = [c.split("[")[-1].rstrip("]") for c in df_pdv.columns]
+            df_pdv["CodLoja"] = df_pdv["CodLoja"].astype(int)
+            df_pdv["Cupons"]  = df_pdv["Cupons"].astype(float)
+            df = df.merge(df_pdv[["CodLoja", "Cupons"]], on="CodLoja", how="left")
+        else:
+            df["Cupons"] = 0.0
+    except Exception:
+        df["Cupons"] = 0.0
+
+    df["Cupons"] = df["Cupons"].fillna(0).astype(int)
+    df["Meta"]      = df["CodLoja"].map(METAS_LOJAS).fillna(0)
+    df["Margem"]    = (df["Vendas"] - df["CMV"]) / df["Vendas"]
+    df["Ticket"]    = df.apply(lambda r: r["Vendas"] / r["Cupons"] if r["Cupons"] > 0 else 0, axis=1)
+    df["Ating"]     = df.apply(lambda r: r["Vendas"] / r["Meta"] if r["Meta"] > 0 else 0, axis=1)
     df["LucroBruto"] = df["Vendas"] - df["CMV"]
     return df.sort_values("Vendas", ascending=False).reset_index(drop=True)
 
 
 @st.cache_data(ttl=300, show_spinner="Carregando quebras...")
 def carregar_quebras(data_ini: str, data_fim: str) -> pd.DataFrame:
-    query = f"""
-    EVALUATE
-    SUMMARIZECOLUMNS(
-        VendasPDV_Dia[CodLoja],
-        Lojas[Nome],
-        "QuebraTotal", SUM(VendasPDV_Dia[QuebraCaixa]),
-        "Falta",       SUM(VendasPDV_Dia[Falta]),
-        "Sobra",       SUM(VendasPDV_Dia[Sobra]),
-        KEEPFILTERS(FILTER(ALL(VendasPDV_Dia), VendasPDV_Dia[Data] >= DATE({data_ini.replace('-',',')}) && VendasPDV_Dia[Data] <= DATE({data_fim.replace('-',',')})))
-    )
-    """
-    rows = dax_query(DATASET_PDV, query)
-    if not rows:
+    # Tabela de quebras verificada no dataset PDV
+    try:
+        yi, mi, di = data_ini.split("-")
+        yf, mf, df_ = data_fim.split("-")
+        query = f"""
+        EVALUATE
+        SUMMARIZECOLUMNS(
+            VendasPDV_Dia[CodLoja],
+            Lojas[Nome],
+            FILTER(ALL(VendasPDV_Dia),
+                VendasPDV_Dia[Data] >= DATE({yi},{mi},{di}) &&
+                VendasPDV_Dia[Data] <= DATE({yf},{mf},{df_})
+            ),
+            "QuebraTotal", SUM(VendasPDV_Dia[QuebraCaixa]),
+            "Falta",       SUM(VendasPDV_Dia[Falta]),
+            "Sobra",       SUM(VendasPDV_Dia[Sobra])
+        )
+        """
+        rows = dax_query(DATASET_PDV, query)
+        if not rows:
+            return pd.DataFrame()
+        df = pd.DataFrame(rows)
+        df.columns = [c.split("[")[-1].rstrip("]") for c in df.columns]
+        df["CodLoja"] = df["CodLoja"].astype(int)
+        return df
+    except Exception:
         return pd.DataFrame()
-    df = pd.DataFrame(rows)
-    df.columns = [c.split("[")[-1].rstrip("]") for c in df.columns]
-    df["CodLoja"] = df["CodLoja"].astype(int)
-    return df
 
 
 @st.cache_data(ttl=300, show_spinner="Carregando evolução diária...")
 def carregar_evolucao(data_ini: str, data_fim: str) -> pd.DataFrame:
+    yi, mi, di = data_ini.split("-")
+    yf, mf, df_ = data_fim.split("-")
     query = f"""
     EVALUATE
     SUMMARIZECOLUMNS(
         VendasDia[DataVenda],
-        "Vendas", SUM(VendasDia[ValorTotal]),
-        KEEPFILTERS(FILTER(ALL(VendasDia), VendasDia[DataVenda] >= DATE({data_ini.replace('-',',')}) && VendasDia[DataVenda] <= DATE({data_fim.replace('-',',')})))
+        FILTER(ALL(VendasDia),
+            VendasDia[DataVenda] >= DATE({yi},{mi},{di}) &&
+            VendasDia[DataVenda] <= DATE({yf},{mf},{df_})
+        ),
+        "Vendas", SUM(VendasDia[ValorTotal])
     )
     ORDER BY VendasDia[DataVenda]
     """
