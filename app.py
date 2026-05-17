@@ -33,27 +33,76 @@ USUARIOS = {
 }
 
 def login_screen():
+    ASSETS = Path(__file__).parent / "assets"
+    mascote_path = ASSETS / "mascote.png"
+    logo_path    = ASSETS / "logo.png"
+
     st.markdown("""
     <style>
-    .login-box {
-        max-width: 380px; margin: 80px auto; background: white;
-        border-radius: 16px; padding: 40px; box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-        text-align: center;
+    [data-testid="stAppViewContainer"] {
+        background: linear-gradient(135deg, #0D1B2A 0%, #1B2A4A 50%, #0D1B2A 100%);
     }
-    .login-title { font-size: 26px; font-weight: 800; color: #1B2A4A; margin-bottom: 4px; }
-    .login-sub   { font-size: 13px; color: #888; margin-bottom: 28px; }
+    [data-testid="stHeader"] { background: transparent; }
+    .login-card {
+        max-width: 420px; margin: 0 auto;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-top: 4px solid #E65100;
+        border-radius: 18px; padding: 36px 40px 32px;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    .login-marca {
+        font-size: 32px; font-weight: 900; color: #FFFFFF;
+        letter-spacing: 1px; line-height: 1.1; margin-bottom: 2px;
+    }
+    .login-marca span { color: #E65100; }
+    .login-sub {
+        font-size: 12px; color: rgba(255,255,255,0.45);
+        letter-spacing: 2px; text-transform: uppercase;
+        margin-bottom: 6px;
+    }
+    .login-tagline {
+        font-size: 13px; color: rgba(255,255,255,0.6);
+        font-style: italic; margin-bottom: 28px;
+    }
+    .login-divider {
+        height: 2px;
+        background: linear-gradient(90deg, #E65100, #1565C0, #E65100);
+        border-radius: 2px; margin: 16px 0 24px;
+    }
+    .login-footer {
+        text-align: center; font-size: 11px;
+        color: rgba(255,255,255,0.25); margin-top: 20px;
+    }
     </style>
-    <div class="login-box">
-        <div class="login-title">🛒 Supermercados Índio</div>
-        <div class="login-sub">Painel de Lojas — Acesso Restrito</div>
-    </div>
     """, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
+    # Layout: mascote à esquerda, form à direita
+    c_left, c_mid, c_right = st.columns([1, 2, 1])
+    with c_mid:
+        # Mascote (se existir)
+        if mascote_path.exists():
+            st.image(str(mascote_path), width=140)
+        else:
+            st.markdown("<div style='text-align:center;font-size:72px;margin:8px 0'>🪶</div>",
+                        unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="login-card">
+          <div class="login-marca">ÍNDIO<span> SUPER</span></div>
+          <div class="login-sub">Painel de Lojas</div>
+          <div class="login-tagline">❤ Juntos Somos Mais Fortes ❤</div>
+          <div class="login-divider"></div>
+        </div>
+        """, unsafe_allow_html=True)
+
         usuario = st.text_input("Usuário", placeholder="seu usuário").strip().lower()
         senha   = st.text_input("Senha", type="password", placeholder="••••••••")
-        entrar  = st.button("Entrar", use_container_width=True, type="primary")
+        entrar  = st.button("🔓 Entrar", use_container_width=True, type="primary")
+
+        st.markdown("<div class='login-footer'>Acesso restrito — Supermercados Índio © 2026</div>",
+                    unsafe_allow_html=True)
 
         if entrar:
             if usuario in USUARIOS and USUARIOS[usuario]["hash"] == _hash(senha):
@@ -107,17 +156,81 @@ METAS_LOJAS = {
 # ─── CSS ──────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    .main { background-color: #F5F6FA; }
-    .stMetric { background: white; border-radius: 10px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-    .titulo-painel { color: #1B2A4A; font-size: 28px; font-weight: 800; margin-bottom: 4px; }
-    .subtitulo-painel { color: #666; font-size: 14px; margin-bottom: 20px; }
-    .card-kpi { background: white; border-radius: 12px; padding: 16px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); text-align: center; }
-    .kpi-valor { font-size: 24px; font-weight: 800; color: #1B2A4A; }
-    .kpi-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
-    div[data-testid="stSidebarNav"] { display: none; }
+    /* Fundo geral */
+    .main, [data-testid="stAppViewContainer"] { background-color: #F0F2F8; }
+
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0D1B2A 0%, #1B2A4A 100%);
+        border-right: 3px solid #E65100;
+    }
+    [data-testid="stSidebar"] * { color: #FFFFFF !important; }
+    [data-testid="stSidebar"] .stButton button {
+        background: rgba(230,81,0,0.2) !important;
+        border: 1px solid #E65100 !important;
+        color: #fff !important; border-radius: 8px !important;
+    }
+    [data-testid="stSidebar"] .stButton button:hover {
+        background: #E65100 !important;
+    }
+    [data-testid="stSidebarNav"] { display: none; }
+
+    /* Header banner */
+    .header-banner {
+        background: linear-gradient(135deg, #0D1B2A 0%, #1B2A4A 60%, #1565C0 100%);
+        border-radius: 14px; padding: 18px 28px;
+        border-left: 6px solid #E65100;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        margin-bottom: 18px;
+        display: flex; align-items: center; gap: 16px;
+    }
+    .header-titulo {
+        font-size: 26px; font-weight: 900; color: #FFFFFF;
+        letter-spacing: 0.5px; line-height: 1.1;
+    }
+    .header-titulo span { color: #FF8C42; }
+    .header-sub { font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 4px; }
+    .header-badge {
+        background: #E65100; color: white; font-size: 11px;
+        font-weight: 700; padding: 3px 10px; border-radius: 20px;
+        letter-spacing: 1px; text-transform: uppercase; display: inline-block;
+        margin-top: 6px;
+    }
+
+    /* KPI cards */
+    [data-testid="stMetric"] {
+        background: white !important;
+        border-radius: 12px !important;
+        padding: 12px 16px !important;
+        border-top: 3px solid #1565C0 !important;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08) !important;
+    }
+    [data-testid="stMetricLabel"] { font-size: 11px !important; color: #888 !important; font-weight: 600 !important; }
+    [data-testid="stMetricValue"] { color: #1B2A4A !important; font-weight: 800 !important; }
+
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        background: white; border-radius: 10px;
+        border-bottom: 3px solid #E65100;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .stTabs [data-baseweb="tab"] { color: #1B2A4A !important; font-weight: 600; }
+    .stTabs [aria-selected="true"] {
+        background: #1B2A4A !important; color: white !important;
+        border-radius: 8px 8px 0 0 !important;
+    }
+
+    /* Diagnóstico cards */
     .status-critico { color: #C0392B; font-weight: bold; }
     .status-atencao { color: #E6872A; font-weight: bold; }
     .status-ok      { color: #1F7A4B; font-weight: bold; }
+
+    /* Linha colorida decorativa */
+    .linha-marca {
+        height: 4px;
+        background: linear-gradient(90deg, #E65100 0%, #1565C0 50%, #2E7D32 100%);
+        border-radius: 4px; margin: 8px 0 20px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -320,14 +433,32 @@ def fmt_pct(v): return f"{v:.1%}"
 
 
 # ─── SIDEBAR ───────────────────────────────────────────────────
+ASSETS = Path(__file__).parent / "assets"
 with st.sidebar:
-    st.markdown("## 🛒 Índio")
+    # Logo / Mascote
+    mascote_path = ASSETS / "mascote.png"
+    logo_path    = ASSETS / "logo.png"
+    if logo_path.exists():
+        st.image(str(logo_path), use_container_width=True)
+    else:
+        st.markdown("""
+        <div style="text-align:center;padding:12px 0 4px">
+          <div style="font-size:22px;font-weight:900;color:#FF8C42;letter-spacing:1px">ÍNDIO</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.5);letter-spacing:2px">SUPERMERCADOS</div>
+          <div style="height:2px;background:linear-gradient(90deg,#E65100,#1565C0);border-radius:2px;margin:8px 4px 0"></div>
+        </div>""", unsafe_allow_html=True)
+
+    if mascote_path.exists():
+        st.image(str(mascote_path), width=90)
+
     nome_usuario = st.session_state.get("nome", "")
-    st.markdown(f"<small style='color:#aaa'>👤 {nome_usuario}</small>", unsafe_allow_html=True)
+    st.markdown(f"<div style='font-size:12px;color:rgba(255,255,255,0.5);text-align:center;margin-bottom:8px'>👤 {nome_usuario}</div>",
+                unsafe_allow_html=True)
     if st.button("🚪 Sair", use_container_width=True):
         st.session_state.clear()
         st.rerun()
-    st.markdown("---")
+    st.markdown("<div style='height:1px;background:rgba(255,255,255,0.1);margin:12px 0'></div>",
+                unsafe_allow_html=True)
     st.markdown("### 📅 Período")
     col_ini, col_fim = st.columns(2)
     with col_ini:
@@ -374,10 +505,22 @@ if filtro_lojas and not df_vendas.empty:
     df_quebras = df_quebras[df_quebras["CodLoja"].isin(filtro_lojas)] if not df_quebras.empty else df_quebras
 
 # ─── HEADER ────────────────────────────────────────────────────
-st.markdown(f"""
-<div class="titulo-painel">🛒 Supermercados Índio — Painel de Lojas</div>
-<div class="subtitulo-painel">Período: {dt_ini.strftime('%d/%m/%Y')} a {dt_fim.strftime('%d/%m/%Y')} &nbsp;|&nbsp; Dados: Power BI em tempo real</div>
-""", unsafe_allow_html=True)
+col_hdr, col_logo = st.columns([5, 1])
+with col_hdr:
+    st.markdown(f"""
+    <div class="header-banner">
+      <div>
+        <div class="header-titulo">🛒 <span>ÍNDIO</span> SUPERMERCADOS</div>
+        <div class="header-sub">Painel de Lojas &nbsp;|&nbsp; Período: {dt_ini.strftime('%d/%m/%Y')} a {dt_fim.strftime('%d/%m/%Y')} &nbsp;|&nbsp; Power BI em tempo real</div>
+        <span class="header-badge">❤ Juntos Somos Mais Fortes</span>
+      </div>
+    </div>
+    <div class="linha-marca"></div>
+    """, unsafe_allow_html=True)
+with col_logo:
+    mascote_hdr = ASSETS / "mascote.png"
+    if mascote_hdr.exists():
+        st.image(str(mascote_hdr), width=90)
 
 if erro_dados:
     st.error(f"⚠ Erro ao carregar dados do Power BI: {erro_dados}")
